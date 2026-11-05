@@ -1,0 +1,18 @@
+# Secretos
+.env
+
+# Backend
+backend/target/
+*.log
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# Respaldos de base de datos
+*.sql

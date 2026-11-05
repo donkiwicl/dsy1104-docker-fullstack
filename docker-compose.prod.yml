@@ -1,0 +1,43 @@
+# Producción: descarga imágenes ya publicadas en un registry (sin build).
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+# Requiere en .env: DOCKERHUB_USER e IMAGE_TAG (además de las credenciales de la base de datos).
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${DOCKERHUB_USER}/tareas-api:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:mysql://db:3306/${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    # Sin "ports": el backend solo es accesible desde Nginx dentro de la red de Compose.
+
+  frontend:
+    image: ${DOCKERHUB_USER}/tareas-web:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  db_data:
