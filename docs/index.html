@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Docker para Full Stack · DSY1104</title>
+  <meta name="description" content="Mini curso de Docker para DSY1104 (Full Stack 2): entorno y despliegue con Spring Boot, React y MySQL.">
+  <style>
+    :root {
+      --bg: #0f2a3d;
+      --panel: #16384f;
+      --ink: #ffffff;
+      --muted: #a9bfd0;
+      --accent: #2496ed;
+      --amber: #f2a93b;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Calibri, "Segoe UI", system-ui, -apple-system, sans-serif; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    header, main, footer { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+    header { padding-top: 20px; padding-bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between; }
+    h1 { margin: 0; font-family: Cambria, Georgia, serif; font-size: clamp(20px, 3vw, 28px); }
+    .sub { color: var(--muted); font-size: 14px; }
+    .downloads { display: flex; flex-wrap: wrap; gap: 8px; }
+    .downloads a { color: var(--ink); background: var(--panel); text-decoration: none; padding: 8px 12px; border-radius: var(--radius); font-size: 14px; }
+    .downloads a:hover, .downloads a:focus-visible { background: var(--accent); outline: none; }
+
+    main { flex: 1; }
+    .stage { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 16 / 9; touch-action: pan-y; }
+    .stage img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
+    .nav { position: absolute; top: 0; bottom: 0; width: 18%; border: 0; background: transparent; color: var(--ink); font-size: 34px; cursor: pointer; opacity: 0; transition: opacity .15s; }
+    .nav:hover, .nav:focus-visible { opacity: 1; background: linear-gradient(to right, rgba(15,42,61,.55), transparent); outline: none; }
+    .nav.next { right: 0; }
+    .nav.next:hover, .nav.next:focus-visible { background: linear-gradient(to left, rgba(15,42,61,.55), transparent); }
+    .nav.prev { left: 0; }
+    .nav[disabled] { display: none; }
+
+    .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+    .bar button { background: var(--panel); color: var(--ink); border: 0; border-radius: var(--radius); padding: 9px 14px; font-size: 15px; cursor: pointer; }
+    .bar button:hover, .bar button:focus-visible { background: var(--accent); outline: none; }
+    .bar button[disabled] { opacity: .4; cursor: default; background: var(--panel); }
+    #counter { color: var(--muted); font-size: 15px; text-align: center; flex: 1; }
+    #counter strong { color: var(--ink); }
+
+    .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; padding-bottom: 20px; }
+    .thumbs button { padding: 0; border: 2px solid transparent; border-radius: 6px; background: #000; cursor: pointer; overflow: hidden; line-height: 0; }
+    .thumbs button img { width: 100%; height: auto; opacity: .65; }
+    .thumbs button:hover img, .thumbs button:focus-visible img { opacity: 1; }
+    .thumbs button[aria-current="true"] { border-color: var(--amber); }
+    .thumbs button[aria-current="true"] img { opacity: 1; }
+    .thumbs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    footer { padding-top: 8px; padding-bottom: 24px; color: var(--muted); font-size: 13px; }
+    footer a { color: var(--amber); }
+    .hint { margin: 0 0 6px; }
+    @media (prefers-reduced-motion: reduce) { .nav { transition: none; } }
+    @media (max-width: 520px) { .bar button { padding: 9px 10px; } .nav { font-size: 26px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Docker para Full Stack</h1>
+      <div class="sub">Entorno y despliegue · DSY1104 Full Stack 2</div>
+    </div>
+    <nav class="downloads" aria-label="Descargas">
+      <a href="presentacion-docker-dsy1104.pptx" download>PowerPoint</a>
+      <a href="presentacion-docker-dsy1104.pdf">PDF</a>
+      <a href="curso-docker-dsy1104.md">Resumen del curso</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="stage" id="stage">
+      <img id="slide" src="slides/s-01.jpg" alt="">
+      <button class="nav prev" id="navPrev" aria-label="Diapositiva anterior">&#8249;</button>
+      <button class="nav next" id="navNext" aria-label="Diapositiva siguiente">&#8250;</button>
+    </div>
+
+    <div class="bar">
+      <button id="prev" type="button">&larr; Anterior</button>
+      <div id="counter" role="status" aria-live="polite"></div>
+      <button id="next" type="button">Siguiente &rarr;</button>
+      <button id="full" type="button" aria-label="Pantalla completa">Pantalla completa</button>
+    </div>
+
+    <div class="thumbs" id="thumbs" role="list" aria-label="Todas las diapositivas"></div>
+  </main>
+
+  <footer>
+    <p class="hint">Teclado: ← → para navegar, Inicio / Fin para saltar, F para pantalla completa.</p>
+    <p>Código de ejemplo y archivos Docker en el <a href="https://github.com/donkiwicl/dsy1104-docker-fullstack">repositorio del proyecto</a>.</p>
+  </footer>
+
+  <script>
+    (function () {
+      var titles = [
+        "Docker para Full Stack: entorno y despliegue",
+        "Qué vamos a aprender",
+        "Por qué usar Docker",
+        "Cinco conceptos clave",
+        "Arquitectura de la solución",
+        "Backend: Dockerfile multi-stage",
+        "Frontend: React servido por Nginx",
+        "Variables de entorno y secretos",
+        "Docker Compose: tres servicios",
+        "Despliegue en un servidor",
+        "Comandos que usarás a diario",
+        "Errores frecuentes",
+        "Actividad práctica",
+        "Prueba final de calidad"
+      ];
+      var total = titles.length;
+      var img = document.getElementById("slide");
+      var counter = document.getElementById("counter");
+      var thumbs = document.getElementById("thumbs");
+      var stage = document.getElementById("stage");
+      var btns = {
+        prev: [document.getElementById("prev"), document.getElementById("navPrev")],
+        next: [document.getElementById("next"), document.getElementById("navNext")]
+      };
+      var current = 1;
+
+      function src(n) { return "slides/s-" + (n < 10 ? "0" : "") + n + ".jpg"; }
+
+      titles.forEach(function (t, i) {
+        var n = i + 1;
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "listitem");
+        b.setAttribute("aria-label", "Ir a la diapositiva " + n + ": " + t);
+        var im = document.createElement("img");
+        im.src = src(n); im.alt = ""; im.loading = "lazy";
+        b.appendChild(im);
+        b.addEventListener("click", function () { go(n); });
+        thumbs.appendChild(b);
+      });
+
+      function go(n, noHash) {
+        n = Math.max(1, Math.min(total, n));
+        current = n;
+        img.src = src(n);
+        img.alt = "Diapositiva " + n + " de " + total + ": " + titles[n - 1];
+        counter.innerHTML = "<strong>" + n + "</strong> / " + total + " · " + titles[n - 1];
+        btns.prev.forEach(function (b) { b.disabled = n === 1; });
+        btns.next.forEach(function (b) { b.disabled = n === total; });
+        Array.prototype.forEach.call(thumbs.children, function (b, i) {
+          if (i + 1 === n) b.setAttribute("aria-current", "true"); else b.removeAttribute("aria-current");
+        });
+        if (n < total) { var pre = new Image(); pre.src = src(n + 1); }
+        if (!noHash) history.replaceState(null, "", "#" + n);
+      }
+
+      btns.prev.forEach(function (b) { b.addEventListener("click", function () { go(current - 1); }); });
+      btns.next.forEach(function (b) { b.addEventListener("click", function () { go(current + 1); }); });
+
+      function toggleFull() {
+        if (document.fullscreenElement) { document.exitFullscreen(); }
+        else if (stage.requestFullscreen) { stage.requestFullscreen(); }
+      }
+      document.getElementById("full").addEventListener("click", toggleFull);
+
+      document.addEventListener("keydown", function (e) {
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        if (e.key === "ArrowRight" || e.key === "PageDown") { go(current + 1); e.preventDefault(); }
+        else if (e.key === "ArrowLeft" || e.key === "PageUp") { go(current - 1); e.preventDefault(); }
+        else if (e.key === "Home") { go(1); e.preventDefault(); }
+        else if (e.key === "End") { go(total); e.preventDefault(); }
+        else if (e.key === "f" || e.key === "F") { toggleFull(); }
+      });
+
+      var x0 = null;
+      stage.addEventListener("touchstart", function (e) { x0 = e.changedTouches[0].clientX; }, { passive: true });
+      stage.addEventListener("touchend", function (e) {
+        if (x0 === null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        if (Math.abs(dx) > 50) go(current + (dx < 0 ? 1 : -1));
+        x0 = null;
+      }, { passive: true });
+
+      function fromHash() {
+        var n = parseInt(location.hash.slice(1), 10);
+        go(isNaN(n) ? 1 : n, true);
+      }
+      window.addEventListener("hashchange", fromHash);
+      fromHash();
+    })();
+  </script>
+</body>
+</html>

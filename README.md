@@ -149,4 +149,6 @@ En producción solo se publica el puerto 80 (Nginx). La base de datos y el backe
 
 ## Material del curso
 
-En `docs/` están la presentación del mini curso y el contenido en Markdown.
+En `docs/` están la presentación del mini curso (PowerPoint y PDF) y el resumen en Markdown.
+La presentación también se publica como sitio en GitHub Pages:
+https://donkiwicl.github.io/dsy1104-docker-fullstack/
